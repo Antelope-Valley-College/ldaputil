@@ -67,6 +67,7 @@ def process_args():
 
 def main():
     arg_list = process_args()
+    # If Unicode is requierd, update arglist.value with .encode('utf_16_le')
     process(arg_list)
 
 def process(arg_list):
@@ -243,29 +244,35 @@ def ldap_get(arg_list):
 
 def ldap_set(arg_list):
     def fxn(arg_list, entry, attr):
-        return {attr:[(ldap3.MODIFY_REPLACE,[arg_list.value.encode('utf_16_le')])]}
+        return {attr:[(ldap3.MODIFY_REPLACE,[arg_list.value])]}
     ldap_modify(arg_list, fxn)
 
 def ldap_add(arg_list):
     def fxn(arg_list, entry, attr):
         if attr in entry.entry_attributes_as_dict and arg_list.value in entry[attr].values:
-            print ("%i of %i Updating %s Already present"%(index+1,total,entry.entry_dn))
+            print (f"{entry.entry_dn} value {arg_list.value} exists in attribute {attr}")
             return []
-        return {attr:[(ldap3.MODIFY_ADD,[arg_list.value.encode('utf_16_le')])]}
+        return {attr:[(ldap3.MODIFY_ADD,[arg_list.value])]}
     ldap_modify(arg_list, fxn)
 
 def ldap_remove(arg_list):
     def fxn(arg_list, entry, attr):
-        if attr not in entry.entry_attributes_as_dict or arg_list.value not in entry[attr].values:
-            print ("%i of %i Updating %s Already missing"%(index+1,total,entry.entry_dn))
+        if attr not in entry.entry_attributes_as_dict:
+            print (f"{entry.entry_dn} attribute {attr} not present")
             return []
-        return {attr:[(ldap3.MODIFY_DELETE,[arg_list.value.encode('utf_16_le')])]}
+        if arg_list.value not in entry[attr].values:
+            print (f"{entry.entry_dn} value {arg_list.value} not present in attribute {attr}")
+            return []
+        return {attr:[(ldap3.MODIFY_DELETE,[arg_list.value])]}
     ldap_modify(arg_list, fxn)
 
 def ldap_replace(arg_list):
     def fxn(arg_list, entry, attr):
-        if attr not in entry.entry_attributes_as_dict or arg_list.old_value not in entry[attr].values:
-            print ("%i of %i Updating %s Not present"%(index+1,total,entry.entry_dn))
+        if attr not in entry.entry_attributes_as_dict:
+            print (f"{entry.entry_dn} attribute {attr} not present")
+            return []
+        if arg_list.value not in entry[attr].values:
+            print (f"{entry.entry_dn} value {arg_list.value} not present in attribute {attr}")
             return []
         return {attr:[(ldap3.MODIFY_DELETE,[arg_list.old_value]),(ldap3.MODIFY_ADD,[arg_list.new_value])]}
     ldap_modify(arg_list, fxn)
